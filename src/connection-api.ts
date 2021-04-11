@@ -1,11 +1,14 @@
-import { Body, Controller, Get, Patch, Post, Response } from "@alterior/web-server";
-import { RegistryService } from "@astronautlabs/is04";
-import { ConstraintsSchema, ReceiverResponseSchema, ReceiverStageSchema, SenderResponseSchema, SenderStageSchema } from "./schema";
+import { Body, Controller, Get, Patch, Post, Response, WebEvent } from "@alterior/web-server";
+import { HttpError } from "@alterior/common";
+import { Receiver, RegistryService, Sender } from "@astronautlabs/is04";
+import { ConnectionService, IncorrectResourceTypeError, NotFoundError } from "./connection.service";
+import { ConstraintsSchema, Error, ReceiverResponseSchema, ReceiverStageSchema, SenderResponseSchema, SenderStageSchema } from "./schema";
 
 @Controller()
 export class ConnectionApi {
     constructor(
-        private registry : RegistryService
+        private registry : RegistryService,
+        private connectionService : ConnectionService
     ) {
     }
 
@@ -30,34 +33,86 @@ export class ConnectionApi {
         return ['constraints/', 'staged/', 'active/', 'transportfile/', 'transporttype/'];
     }
     
+    private getSenderState(id : string) {
+        try {
+            return this.connectionService.getSenderState(id);
+        } catch (e) {
+            if (e instanceof NotFoundError || e instanceof IncorrectResourceTypeError) {
+                throw new HttpError(404, <Error>{
+                    code: 404,
+                    debug: 'not-found',
+                    error: e.message
+                })
+            }
+
+            throw e;
+        }
+    }
+
+    private getReceiverState(id : string) {
+        try {
+            return this.connectionService.getReceiverState(id);
+        } catch (e) {
+            if (e instanceof NotFoundError || e instanceof IncorrectResourceTypeError) {
+                throw new HttpError(404, <Error>{
+                    code: 404,
+                    debug: 'not-found',
+                    error: e.message
+                })
+            }
+
+            throw e;
+        }
+    }
+
     @Get('/x-nmos/connection/:v/single/senders/:id/constraints') 
     async getSenderConstraints(id : string): Promise<ConstraintsSchema> { 
-        return null; // TODO 
+        return this.getSenderState(id).constraints;
     }
 
     @Get('/x-nmos/connection/:v/single/senders/:id/staged') 
     async getSenderStaged(id : string): Promise<SenderStageSchema> { 
-        return null; // TODO
+        return this.getSenderState(id).staged;
     }
 
     @Patch('/x-nmos/connection/:v/single/senders/:id/staged') 
     async patchSenderStaged(id : string, @Body() body : Partial<SenderStageSchema>): Promise<SenderStageSchema> { 
-        return null; // TODO
+        let state = this.getSenderState(id);
+        this.connectionService.stageSenderState(id, body);
+        return state.staged;
     }
 
     @Get('/x-nmos/connection/:v/single/senders/:id/active') 
     async getSenderActive(id : string): Promise<SenderResponseSchema> { 
-        return null; // TODO
+        return this.getSenderState(id).active;
     }
 
     @Get('/x-nmos/connection/:v/single/senders/:id/transportfile') 
     async getSenderTransportFile(id : string) { 
-        return 'TODO'; 
+        let sender = this.getSenderState(id);
+        let resource = <Sender>this.registry.getResourceById(id);
+
+        if (sender.transportFile) {
+            WebEvent.response
+                .contentType(sender.transportFile.contentType)
+                .send(sender.transportFile.content);
+        } else if (resource.manifest_href) {
+            WebEvent.response
+                .redirect(307, resource.manifest_href);
+        } else {
+            console.error(`Error: Transport file requested for sender '${id} but no transport file is attached to it'`);
+            throw new HttpError(500, <Error>{
+                code: 500,
+                debug: 'transport-file-not-specified',
+                error: 'The transport file for this sender was not specified'
+            });
+        }
     }
 
     @Get('/x-nmos/connection/:v/single/senders/:id/transporttype') 
     async getSenderTransportType(id : string): Promise<string> { 
-        return 'urn:x-nmos:transport:mqtt'; // TODO
+        let sender = <Sender>this.registry.getResourceById(id);
+        return sender.transport;
     }
 
     @Get('/x-nmos/connection/:v/single/receivers/:id') 
@@ -67,26 +122,29 @@ export class ConnectionApi {
 
     @Get('/x-nmos/connection/:v/single/receivers/:id/constraints') 
     async getReceiverConstraints(id : string): Promise<ConstraintsSchema> { 
-        return null; // TODO
+        return this.getReceiverState(id).constraints;
     }
 
     @Get('/x-nmos/connection/:v/single/receivers/:id/staged') 
     async getReceiverStaged(id : string): Promise<ReceiverStageSchema> { 
-        return null; // TODO 
+        return this.getReceiverState(id).staged;
     }
 
     @Patch('/x-nmos/connection/:v/single/receivers/:id/staged') 
     async patchReceiverStaged(id : string, @Body() body : Partial<ReceiverStageSchema>): Promise<ReceiverStageSchema> { 
-        return null; // TODO 
+        let state = this.getReceiverState(id);
+        this.connectionService.stageReceiverState(id, body);
+        return state.staged;
     }
 
     @Get('/x-nmos/connection/:v/single/receivers/:id/active') 
     async getReceiverActive(id : string): Promise<ReceiverResponseSchema> { 
-        return null; // TODO
+        return this.getReceiverState(id).active;
     }
 
     @Get('/x-nmos/connection/:v/single/receivers/:id/transporttype') 
     async getReceiverTransportType(id : string): Promise<string> { 
-        return ''; // TODO
+        let resource = <Receiver>this.registry.getResourceById(id);
+        return resource.transport;
     }
 }
