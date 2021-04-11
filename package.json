@@ -1,0 +1,30 @@
+{
+  "name": "@astronautlabs/is05",
+  "version": "0.0.1",
+  "description": "AMWA IS-05 NMOS Device Connection Management",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -b",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/astronautlabs/is05.git"
+  },
+  "keywords": [
+    "amwa",
+    "nmos",
+    "is-05",
+    "is05",
+    "broadcast"
+  ],
+  "author": "Astronaut Labs, LLC",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/astronautlabs/is05/issues"
+  },
+  "homepage": "https://github.com/astronautlabs/is05#readme",
+  "devDependencies": {
+    "typescript": "^4.2.4"
+  }
+}
