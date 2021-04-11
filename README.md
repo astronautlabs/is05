@@ -1,7 +1,7 @@
 # @/is05
 
-[![npm](https://img.shields.io/npm/v/@astronautlabs/is04)](https://npmjs.com/package/@astronautlabs/is04)
-[![CircleCI](https://circleci.com/gh/astronautlabs/is04.svg?style=svg)](https://circleci.com/gh/astronautlabs/is04)
+[![npm](https://img.shields.io/npm/v/@astronautlabs/is05)](https://npmjs.com/package/@astronautlabs/is05)
+[![CircleCI](https://circleci.com/gh/astronautlabs/is05.svg?style=svg)](https://circleci.com/gh/astronautlabs/is05)
 
 > **[📜 NMOS IS-05](https://specs.amwa.tv/is-05/)**  
 > AMWA IS-05 NMOS Device Connection Management Specification (Stable)
@@ -9,6 +9,7 @@
 > 📺 Part of the **Astronaut Labs Broadcast Suite**  
 > [@/is04](https://github.com/astronautlabs/is04) |
 > [@/is05](https://github.com/astronautlabs/is05) |
+> [@/is07](https://github.com/astronautlabs/is07) |
 > [@/rfc8331](https://github.com/astronautlabs/rfc8331) |
 > [@/rtp](https://github.com/astronautlabs/rtp) |
 > [@/scte104](https://github.com/astronautlabs/scte104) | 
