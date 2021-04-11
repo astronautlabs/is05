@@ -2,7 +2,7 @@ import { Body, Controller, Get, Patch, Post, Response, WebEvent } from "@alterio
 import { HttpError } from "@alterior/common";
 import { Receiver, RegistryService, Sender } from "@astronautlabs/is04";
 import { ConnectionService, IncorrectResourceTypeError, NotFoundError } from "./connection.service";
-import { ConstraintsSchema, Error, ReceiverResponseSchema, ReceiverStageSchema, SenderResponseSchema, SenderStageSchema } from "./schema";
+import { BulkReceiverPostSchema, BulkResponseSchema, BulkSenderPostSchema, ConstraintsSchema, Error, ReceiverResponseSchema, ReceiverStageSchema, SenderResponseSchema, SenderStageSchema } from "./schema";
 
 @Controller()
 export class ConnectionApi {
@@ -20,12 +20,56 @@ export class ConnectionApi {
     @Get('/x-nmos/connection/:v/single/senders') singleSenders() { return this.registry.senders.map(x => x.id); }
     @Get('/x-nmos/connection/:v/single/receivers') singleReceivers() { return this.registry.receivers.map(x => x.id); }
 
-    @Post('/x-nmos/connection/:v/bulk/senders') updateBulkSenders() {
-        // TODO
+    @Post('/x-nmos/connection/:v/bulk/senders') 
+    async updateBulkSenders(@Body() body : BulkSenderPostSchema): Promise<BulkResponseSchema> {
+        let results : BulkResponseSchema = [];
+        
+        for (let obj of body) {
+            try {
+                let state = this.getSenderState(obj.id);
+                this.connectionService.stageSenderState(obj.id, obj.params);
+                results.push({ id: obj.id, code: 200 });
+            } catch (e) {
+                if (e instanceof HttpError) {
+                    results.push(Object.assign(e.body, { id: obj.id }));
+                } else {
+                    results.push({
+                        id: obj.id,
+                        code: 500,
+                        debug: `${e}`,
+                        error: e.message
+                    });
+                }
+            }
+        }
+
+        return results;
     }
 
-    @Post('/x-nmos/connection/:v/bulk/receivers') updateBulkReceivers() {
-        // TODO
+    @Post('/x-nmos/connection/:v/bulk/receivers') 
+    async updateBulkReceivers(@Body() body : BulkReceiverPostSchema): Promise<BulkResponseSchema> {
+        let results : BulkResponseSchema = [];
+        
+        for (let obj of body) {
+            try {
+                let state = this.getReceiverState(obj.id);
+                this.connectionService.stageSenderState(obj.id, obj.params);
+                results.push({ id: obj.id, code: 200 });
+            } catch (e) {
+                if (e instanceof HttpError) {
+                    results.push(Object.assign(e.body, { id: obj.id }));
+                } else {
+                    results.push({
+                        id: obj.id,
+                        code: 500,
+                        debug: `${e}`,
+                        error: e.message
+                    });
+                }
+            }
+        }
+
+        return results;
     }
 
     
