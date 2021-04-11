@@ -62,7 +62,7 @@ export interface ResourceState {
 
 export interface TransportFile {
     contentType : string;
-    content : Buffer;
+    content : string | Buffer;
 }
 export interface SenderState extends ResourceState {
     type : 'sender';
