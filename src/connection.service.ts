@@ -1,6 +1,6 @@
 import { Injectable } from '@alterior/di';
 import { Receiver, RegistryService, Sender } from '@astronautlabs/is04';
-import { ActivationSchema, ConstraintSchema, ReceiverResponseSchema, ReceiverStageSchema, SenderResponseSchema, SenderStageSchema } from './schema';
+import { ActivationSchema, Constraint, ConstraintsSchema, ReceiverResponseSchema, ReceiverStageSchema, SenderResponseSchema, SenderStageSchema } from './schema';
 import { Subject, Observable } from 'rxjs';
 import { TaiTimestamp } from '@1500cloud/taitimestamp';
 import * as tai from '@1500cloud/taitimestamp';
@@ -30,7 +30,7 @@ export interface ActiveState {
 export interface ResourceState {
     id : string;
     type : string;
-    constraints : ConstraintSchema[];
+    constraints : ConstraintsSchema;
     staged : StagedState;
     active : ActiveState;
     pendingActivation? : PendingActivation;
