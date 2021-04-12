@@ -46,6 +46,11 @@ export interface Options {
     nameTransformer? : (name : string) => string;
 }
 
+export interface Reference {
+    filename : string;
+    definition : string;
+}
+
 export async function transformSchema(options : Options) {
     let { inputDir, outputDir, nameTransformer } = options;
     interface Import {
@@ -66,6 +71,25 @@ export async function transformSchema(options : Options) {
         ;
     }
 
+    function parseReference(ref : string): Reference {
+        // ref=foobar.json#/definitions/blah
+        // or ref=foobar.json#
+
+        let [ filename, hash ] = ref.split('#');
+
+        let interfaceFilename = toInterfaceName(path.basename(filename, '.json'));
+        let definitionFilename = toInterfaceName(path.basename(filename, '.json'));
+
+        if (hash?.startsWith('/definitions/')) {
+            definitionFilename = toInterfaceName(hash.replace(/\/definitions\//, ''));
+        }
+
+        return {
+            filename: interfaceFilename,
+            definition: definitionFilename
+        };
+    }
+
     function schemaToTS(schema : Schema, imports : Import[], indent = '') {
         let indentUnit = `    `;
         let indented = `${indent}${indentUnit}`;
@@ -74,9 +98,11 @@ export async function transformSchema(options : Options) {
             if (schema.$ref.startsWith('#')) {
                 throw new Error(`Local refs not yet implemented`);
             } else {
-                let interfaceName = toInterfaceName(path.basename(schema.$ref, '.json'));
-                imports.push({ symbol: interfaceName, from: `./${interfaceName}` });
-                return interfaceName;
+                //let interfaceName = toInterfaceName(path.basename(schema.$ref, '.json'));
+                let ref = parseReference(schema.$ref);
+
+                imports.push({ symbol: ref.definition, from: `./${ref.filename}` });
+                return ref.definition;
             }
         } else {
             let defn = <SchemaDefinition>schema;
@@ -155,13 +181,61 @@ export async function transformSchema(options : Options) {
             continue;
 
         let name = path.basename(file, '.json');
+        
+        let imports : Import[] = [];
+        let schema = await readJsonFile<Schema>(path.join(inputDir, file));
+
+        if ('definitions' in schema) {
+            let declarations : string[] = [];
+            let outputFilename = path.resolve(outputDir, `${toInterfaceName(name)}.ts`);
+
+            for (let defnName of Object.keys(schema.definitions)) {
+                let defn = schema.definitions[defnName];
+                let decl = schemaToTS(defn, imports);
+                let interfaceName = toInterfaceName(defnName);
+                let description = '';
+
+                if ('description' in schema) {
+                    description = schema.description;
+                }
+        
+                if (description) {
+                    description = `/**\n * ${description}\n */\n`;
+                }
+        
+                declarations.push(`${description}export type ${interfaceName} = ${decl}`);
+            }
+
+            let importMap : Record<string, string[]> = {};
+            for (let impo of imports) {
+                if (!importMap[impo.from])
+                    importMap[impo.from] = [];
+    
+                if (!importMap[impo.from].includes(impo.symbol))
+                    importMap[impo.from].push(impo.symbol);
+            }
+    
+            let importStatements = Object
+                .keys(importMap)
+                .map(from => `import { ${importMap[from].join(', ')} } from ${JSON.stringify(from)};`)
+            ;
+
+            await writeFile(
+                outputFilename,
+                `${importStatements.join("\n")}\n`
+                + `${declarations.join("\n")}`
+            );
+
+            indexList.push(toInterfaceName(name));
+
+            continue;
+        }
+
         let interfaceName = toInterfaceName(name);
         let outputFilename = path.resolve(outputDir, `${interfaceName}.ts`);
 
         console.log(`${file} => ${interfaceName}.ts`);
 
-        let imports : Import[] = [];
-        let schema = await readJsonFile<Schema>(path.join(inputDir, file));
         let type = schemaToTS(schema, imports);
 
         // Deduplicate and format imports
@@ -187,13 +261,13 @@ export async function transformSchema(options : Options) {
         }
 
         if (description) {
-            description = `/**\n * ${description}\n */`;
+            description = `/**\n * ${description}\n */\n`;
         }
 
         await writeFile(
             outputFilename, 
             `${importStatements.join("\n")}\n`
-            + `${description}\n`
+            + `${description}`
             + `export type ${interfaceName} = ${type};`
         );
 
