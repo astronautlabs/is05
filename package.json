@@ -39,6 +39,6 @@
   "dependencies": {
     "@1500cloud/taitimestamp": "^0.2.8",
     "@alterior/web-server": "*",
-    "@astronautlabs/is04": "^0.0.3"
+    "@astronautlabs/is04": "^0.0.4"
   }
 }
